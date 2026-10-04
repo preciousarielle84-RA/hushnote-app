@@ -10,7 +10,8 @@ const io = new Server(server);
 
 // Configuration Supabase avec ton URL et ta clé secrète
 const SUPABASE_URL = 'https://xaetcojuoooqtbdcuyso.supabase.co'; 
-const SUPABASE_KEY = 'sb_secret_asuY-np6t4iFkidxpLOs5Q_IvnIRfmC';
+const SUPABASE_KEY = 'sb_pub_xaetcojuoooqtbdcuyso
+  ';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
