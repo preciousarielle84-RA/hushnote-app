@@ -27,59 +27,67 @@
 <body>
 
 <div class="card">
-  <!-- Zone VIP -->
+  <!-- Bannières VIP -->
   <div class="vip-banner">
     <div class="vip-title">🔒 Fonctionnalité Réservée aux Membres VIP</div>
     <div class="vip-sub">Abonnez-vous au Pass VIP (640 XAF / mois) pour débloquer la récupération de tous vos messages supprimés.</div>
-    <button class="btn-vip" onclick="demanderAbonnement()">💳 S'abonner au VIP (640 XAF/mois)</button>
+    <button type="button" class="btn-vip" onclick="demanderAbonnement()">💳 S'abonner au VIP (640 XAF/mois)</button>
   </div>
 
-  <!-- Cadre où s'affichent les messages -->
+  <!-- Zone de réception des messages -->
   <div class="messages-box" id="messagesList">
-    <div style="color: #888; text-align: center; margin-top: 70px; font-size: 13px;">Aucun message pour le moment.</div>
+    <div id="emptyMsg" style="color: #888; text-align: center; margin-top: 70px; font-size: 13px;">Aucun message pour le moment.</div>
   </div>
 
-  <!-- Saisie et envoi -->
-  <div class="input-group">
-    <input type="text" id="msgInput" placeholder="Écris ton message...">
-    <button class="btn-send" onclick="envoyerMessage()">Envoyer</button>
-  </div>
+  <!-- Formulaire d'envoi -->
+  <form onsubmit="envoyerMessage(event)" class="input-group">
+    <input type="text" id="msgInput" placeholder="Écris ton message..." required>
+    <button type="submit" class="btn-send">Envoyer</button>
+  </form>
 
-  <!-- Récupération -->
-  <button class="btn-recover" onclick="demanderAbonnement()">🔄 Récupérer les messages supprimés</button>
+  <!-- Bouton de récupération -->
+  <button type="button" class="btn-recover" onclick="demanderAbonnement()">🔄 Récupérer les messages supprimés</button>
 </div>
 
 <script>
-  let listEMessages = [];
+  let mesMessages = [];
 
-  function afficher() {
+  function rechargerAffichage() {
     const box = document.getElementById('messagesList');
-    if (listEMessages.length === 0) {
+    box.innerHTML = '';
+
+    if (mesMessages.length === 0) {
       box.innerHTML = '<div style="color: #888; text-align: center; margin-top: 70px; font-size: 13px;">Aucun message pour le moment.</div>';
       return;
     }
-    box.innerHTML = '';
-    listEMessages.forEach((msg, idx) => {
-      const div = document.createElement('div');
-      div.className = 'message-item';
-      div.innerHTML = `<span>${msg}</span> <button class="btn-delete" onclick="supprimer(${idx})">🗑️</button>`;
-      box.appendChild(div);
+
+    mesMessages.forEach((msgText, idx) => {
+      const item = document.createElement('div');
+      item.className = 'message-item';
+      item.innerHTML = `
+        <span>${msgText}</span>
+        <button type="button" class="btn-delete" onclick="supprimerMessage(${idx})">🗑️</button>
+      `;
+      box.appendChild(item);
     });
   }
 
-  function envoyerMessage() {
-    const inp = document.getElementById('msgInput');
-    const txt = inp.value.trim();
-    if (!txt) return;
-    listEMessages.push(txt);
-    inp.value = '';
-    afficher();
+  function envoyerMessage(event) {
+    event.preventDefault(); // Empêche le rechargement de la page
+    const input = document.getElementById('msgInput');
+    const texte = input.value.trim();
+
+    if (texte !== '') {
+      mesMessages.push(texte);
+      input.value = '';
+      rechargerAffichage();
+    }
   }
 
-  function supprimer(idx) {
-    if (confirm("Supprimer ce message ?")) {
-      listEMessages.splice(idx, 1);
-      afficher();
+  function supprimerMessage(idx) {
+    if (confirm("Voulez-vous vraiment supprimer ce message ?")) {
+      mesMessages.splice(idx, 1);
+      rechargerAffichage();
     }
   }
 
@@ -89,5 +97,4 @@
 </script>
 
 </body>
-    </html>
-    
+</html>
