@@ -3,208 +3,101 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Messagerie Sécurisée VIP</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <title>Hushnote - Messagerie Anonyme VIP</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f9; }
-    h2 { color: #333; text-align: center; }
-    .card { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 15px; }
-    #pay-wall { background: #fff3cd; border: 1px solid #ffeba2; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
-    #chat-box { background: white; border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
-    .msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 5px; background: #e9ecef; display: flex; justify-content: space-between; align-items: center; }
-    .msg.deleted { background: #ffe3e3; color: #721c24; font-style: italic; }
-    .msg.recovered { background: #d4edda; color: #155724; font-style: normal; font-weight: bold; }
-    .btn { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-    .btn-pay { background: #28a745; margin-top: 10px; text-decoration: none; display: inline-block; }
-    .btn-danger { background: #dc3545; padding: 5px 10px; }
-    .btn-cancel { background: #6c757d; font-size: 12px; padding: 6px 12px; margin-top: 8px; }
-    .btn-logout { background: #6c757d; font-size: 12px; padding: 5px 10px; float: right; }
-    .input-group { display: flex; gap: 8px; margin-bottom: 10px; }
-    input[type="text"], input[type="tel"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-    .vip-status { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 15px; }
-    .user-info { font-size: 14px; color: #555; margin-bottom: 10px; overflow: hidden; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
+    h2 { color: #1a73e8; margin-top: 0; }
+    textarea { width: 100%; height: 80px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; box-sizing: border-box; }
+    button { width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 8px; background: #1a73e8; color: white; font-weight: bold; cursor: pointer; }
+    button:active { background: #1557b0; }
+    .btn-recover { background: #00838f; margin-top: 15px; }
+    .messages-list { margin-top: 20px; text-align: left; }
+    .message-item { background: #e8f0fe; padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; color: #333; }
   </style>
 </head>
 <body>
 
-  <h2>Messagerie Sécurisée VIP</h2>
+<div class="card">
+  <h2>🔒 Hushnote</h2>
+  <p>Envoie un message anonyme :</p>
+  
+  <textarea id="msgInput" placeholder="Écris ton message..."></textarea>
+  <button onclick="envoyerMessage()">Envoyer</button>
 
-  <!-- Écran de connexion par Numéro -->
-  <div id="login-section" class="card">
-    <h3>📱 Identifiez-vous</h3>
-    <p>Entrez votre numéro de téléphone pour accéder au tchat :</p>
-    <div class="input-group">
-      <input type="tel" id="userPhoneInput" placeholder="Ex: 690000000">
-      <button class="btn" onclick="connexionUtilisateur()">Se connecter</button>
-    </div>
-  </div>
+  <div class="messages-list" id="messagesList"></div>
 
-  <!-- Zone de l'Application -->
-  <div id="app-section" style="display: none;">
-    <div class="user-info">
-      👤 Connecté : <strong id="displayPhone"></strong>
-      <button class="btn btn-logout" onclick="deconnexion()">Déconnexion</button>
-    </div>
+  <button class="btn-recover" onclick="recupererMessagesSupprimes()">🔄 Récupérer les messages supprimés</button>
+</div>
 
-    <div id="vip-banner"></div>
+<script>
+  let messagesLocaux = [];
 
-    <div id="pay-wall">
-      <strong>🔒 Fonctionnalité Réservée aux Membres VIP</strong>
-      <p>Abonnez-vous au Pass VIP (640 XAF / mois) pour débloquer la récupération de tous vos messages supprimés.</p>
-      <a href="https://ici-y-a-tout.mymaketou.shop/products/ia-business-le-guide-pour-generer-des-revenus/checkout" class="btn btn-pay" target="_blank">
-        💳 S'abonner au VIP (640 XAF/mois)
-      </a>
-    </div>
-
-    <div id="chat-box"></div>
-
-    <div class="input-group">
-      <input type="text" id="messageInput" placeholder="Écris ton message...">
-      <button class="btn" onclick="envoyerMessage()">Envoyer</button>
-    </div>
-
-    <button class="btn" style="background: #17a2b8; width: 100%; margin-bottom: 10px;" onclick="recupererMessages()">
-      🔄 Récupérer les messages supprimés
-    </button>
-  </div>
-
-  <script>
-    const socket = io();
-    const chatBox = document.getElementById('chat-box');
-    const messageInput = document.getElementById('messageInput');
-    let currentUserPhone = localStorage.getItem('userPhone');
-
-    // Détection redirection VIP
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('vip') === 'true') {
-      localStorage.setItem('isVip', 'true');
-    }
-    let isVip = localStorage.getItem('isVip') === 'true';
-
-    function initSession() {
-      if (currentUserPhone) {
-        document.getElementById('login-section').style.display = 'none';
-        document.getElementById('app-section').style.display = 'block';
-        document.getElementById('displayPhone').innerText = currentUserPhone;
-        majInterfaceVIP();
-        socket.emit('user_login', currentUserPhone);
-      } else {
-        document.getElementById('login-section').style.display = 'block';
-        document.getElementById('app-section').style.display = 'none';
+  async function chargerMessages() {
+    try {
+      const res = await fetch('/api/messages');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        messagesLocaux = data;
+        afficherMessages();
       }
+    } catch (e) {
+      console.error(e);
     }
+  }
 
-    function connexionUtilisateur() {
-      const phone = document.getElementById('userPhoneInput').value.trim();
-      if (phone !== '') {
-        localStorage.setItem('userPhone', phone);
-        currentUserPhone = phone;
-        initSession();
-      } else {
-        alert("Veuillez entrer un numéro valide.");
-      }
+  function afficherMessages() {
+    const list = document.getElementById('messagesList');
+    list.innerHTML = '';
+    messagesLocaux.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'message-item';
+      div.textContent = m.content || m.texte || m;
+      list.appendChild(div);
+    });
+  }
+
+  async function envoyerMessage() {
+    const input = document.getElementById('msgInput');
+    const texte = input.value.trim();
+    if (!texte) return alert("Veuillez écrire un message.");
+
+    // Ajout instantané à l'écran
+    messagesLocaux.push({ content: texte });
+    afficherMessages();
+    input.value = '';
+
+    // Envoi au serveur
+    try {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: texte })
+      });
+    } catch (e) {
+      console.error(e);
     }
+  }
 
-    function deconnexion() {
-      localStorage.removeItem('userPhone');
-      currentUserPhone = null;
-      initSession();
-    }
-
-    function majInterfaceVIP() {
-      if (isVip) {
-        document.getElementById('pay-wall').style.display = 'none';
-        document.getElementById('vip-banner').innerHTML = `
-          <div class="vip-status">
-            ✅ <strong>VIP Actif pour : ${currentUserPhone}</strong><br>
-            <button class="btn btn-cancel" onclick="desabonnerVIP()">Se désabonner</button>
-          </div>
-        `;
-      } else {
-        document.getElementById('pay-wall').style.display = 'block';
-        document.getElementById('vip-banner').innerHTML = '';
-      }
-    }
-
-    function desabonnerVIP() {
-      if (confirm("⚠️️ Annuler l'abonnement VIP sans remboursement ?")) {
-        localStorage.removeItem('isVip');
-        isVip = false;
-        window.location.href = '/';
-      }
-    }
-
-    function envoyerMessage() {
-      const text = messageInput.value.trim();
-      if (text !== '') {
-        socket.emit('send_message', { text: text, phone: currentUserPhone });
-        messageInput.value = '';
-      }
-    }
-
-    function supprimerMessage(id) {
-      socket.emit('delete_message', id);
-    }
-
-    function recupererMessages() {
-      socket.emit('recover_messages', { isVip: isVip, phone: currentUserPhone });
-    }
-
-    function afficherMessage(msg) {
-      let div = document.getElementById('msg-' + msg.id);
-      if (!div) {
-        div = document.createElement('div');
-        div.id = 'msg-' + msg.id;
-        chatBox.appendChild(div);
-      }
+  async function recupererMessagesSupprimes() {
+    try {
+      const res = await fetch('/api/messages-deleted');
+      const data = await res.json();
       
-      if (msg.is_deleted) {
-        div.className = 'msg deleted';
-        div.innerHTML = `<span>Ce message a été supprimé</span>`;
+      if (!data || data.length === 0) {
+        alert("ℹ️ Aucun message à récupérer.");
       } else {
-        div.className = 'msg';
-        div.innerHTML = `
-          <span>${msg.text}</span>
-          <button class="btn btn-danger" onclick="supprimerMessage('${msg.id}')">Supprimer</button>
-        `;
+        alert("🔒 ACCÈS REFUSÉ !\n\nVous devez obligatoirement souscrire à l'abonnement VIP (640 XAF / mois) avant de pouvoir récupérer les messages supprimés.");
       }
+    } catch (e) {
+      alert("ℹ️ Aucun message à récupérer.");
     }
+  }
 
-    socket.on('load_messages', (messages) => {
-      chatBox.innerHTML = '';
-      messages.forEach(msg => afficherMessage(msg));
-    });
+  // Chargement initial des messages
+  chargerMessages();
+</script>
 
-    socket.on('new_message', (msg) => afficherMessage(msg));
-
-    socket.on('message_deleted', (id) => {
-      const div = document.getElementById('msg-' + id);
-      if (div) {
-        div.className = 'msg deleted';
-        div.innerHTML = `<span>Ce message a été supprimé</span>`;
-      }
-    });
-
-    socket.on('access_denied', (msg) => alert(msg));
-
-    socket.on('recovered_messages', (deletedMessages) => {
-      if (!deletedMessages || deletedMessages.length === 0) {
-        alert("ℹ Aucun message supprimé à récupérer pour le moment.");
-      } else {
-        deletedMessages.forEach(msg => {
-          const div = document.getElementById('msg-' + msg.id);
-          if (div) {
-            div.className = 'msg recovered';
-            div.innerHTML = `
-              <span>♻️ [Restauration VIP] : ${msg.text}</span>
-              <button class="btn btn-danger" onclick="supprimerMessage('${msg.id}')">Supprimer</button>
-            `;
-          }
-        });
-      }
-    });
-
-    initSession();
-  </script>
 </body>
 </html>
+
