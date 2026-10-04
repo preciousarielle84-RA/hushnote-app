@@ -27,16 +27,16 @@
 <body>
 
 <div class="card">
-  <!-- Bannières VIP -->
+  <!-- Bannière VIP -->
   <div class="vip-banner">
     <div class="vip-title">🔒 Fonctionnalité Réservée aux Membres VIP</div>
     <div class="vip-sub">Abonnez-vous au Pass VIP (640 XAF / mois) pour débloquer la récupération de tous vos messages supprimés.</div>
-    <button type="button" class="btn-vip" onclick="demanderAbonnement()">💳 S'abonner au VIP (640 XAF/mois)</button>
+    <button type="button" class="btn-vip" onclick="payerAbonnement()">💳 S'abonner au VIP (640 XAF/mois)</button>
   </div>
 
-  <!-- Zone de réception des messages -->
+  <!-- Cadre d'affichage des messages -->
   <div class="messages-box" id="messagesList">
-    <div id="emptyMsg" style="color: #888; text-align: center; margin-top: 70px; font-size: 13px;">Aucun message pour le moment.</div>
+    <div style="color: #888; text-align: center; margin-top: 70px; font-size: 13px;">Aucun message pour le moment.</div>
   </div>
 
   <!-- Formulaire d'envoi -->
@@ -73,7 +73,7 @@
   }
 
   function envoyerMessage(event) {
-    event.preventDefault(); // Empêche le rechargement de la page
+    event.preventDefault();
     const input = document.getElementById('msgInput');
     const texte = input.value.trim();
 
@@ -91,6 +91,12 @@
     }
   }
 
+  // Redirection directe vers la caisse Maketou
+  function payerAbonnement() {
+    window.location.href = "https://ici-y-a-tout.mymaketou.shop/products/ia-business-le-guide-pour-generer-des-revenus/checkout"; 
+  }
+
+  // Message d'accès refusé lors de la tentative de récupération
   function demanderAbonnement() {
     alert("🔒 ACCÈS REFUSÉ !\n\nVous devez obligatoirement souscrire à l'abonnement VIP (640 XAF / mois) pour effectuer cette action.");
   }
