@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hushnote</title>
+  <title>Hushnote - Messages Anonymes</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; display: flex; justify-content: center; }
     .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; width: 100%; box-sizing: border-box; }
@@ -13,15 +13,15 @@
     .vip-sub { font-size: 13px; color: #555; margin-bottom: 12px; line-height: 1.4; }
     .btn-vip { background: #2e7d32; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 14px; }
     
-    .messages-box { border: 1px solid #e0e0e0; border-radius: 12px; min-height: 180px; max-height: 250px; overflow-y: auto; padding: 10px; margin-bottom: 15px; background: #fafafa; }
-    .message-item { background: white; border: 1px solid #eee; padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; word-break: break-word; }
-    .btn-delete { background: none; border: none; cursor: pointer; font-size: 16px; padding: 0 5px; }
+    .messages-box { border: 1px solid #e0e0e0; border-radius: 12px; min-height: 180px; max-height: 260px; overflow-y: auto; padding: 10px; margin-bottom: 15px; background: #fafafa; }
+    .message-item { background: white; border: 1px solid #eee; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; word-break: break-word; }
+    .deleted-notice { background: #ffebee; border: 1px dashed #ef5350; color: #c62828; padding: 10px; border-radius: 8px; font-size: 13px; margin-top: 5px; }
     
     .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
     .input-group input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; outline: none; font-size: 14px; }
     .btn-send { background: #007bff; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     
-    .btn-recover { background: #00838f; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 14px; }
+    .btn-unlock { background: #d32f2f; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 14px; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -29,76 +29,58 @@
 <div class="card">
   <!-- Bannière VIP -->
   <div class="vip-banner">
-    <div class="vip-title">🔒 Fonctionnalité Réservée aux Membres VIP</div>
-    <div class="vip-sub">Abonnez-vous au Pass VIP (640 XAF / mois) pour débloquer la récupération de tous vos messages supprimés.</div>
-    <button type="button" class="btn-vip" onclick="payerAbonnement()">💳 S'abonner au VIP (640 XAF/mois)</button>
+    <div class="vip-title">🔒 Passerelle VIP Hushnote</div>
+    <div class="vip-sub">Débloquez la lecture des messages anonymes annulés ou effacés par vos expéditeurs pour 640 XAF / mois.</div>
+    <button type="button" class="btn-vip" onclick="payerAbonnement()">💳 S'abonner au Pass VIP (640 XAF/mois)</button>
   </div>
 
-  <!-- Cadre d'affichage des messages -->
+  <!-- Boîte de réception -->
   <div class="messages-box" id="messagesList">
-    <div style="color: #888; text-align: center; margin-top: 70px; font-size: 13px;">Aucun message pour le moment.</div>
+    <!-- Exemple de message supprimé par l'expéditeur pour susciter la curiosité -->
+    <div class="message-item">
+      <div style="font-weight: bold; color: #555; margin-bottom: 4px;">📩 Message Anonyme Reçu</div>
+      <div class="deleted-notice">
+        ⚠️ <i>L'expéditeur a annulé et supprimé ce message juste après l'envoi.</i>
+      </div>
+      <button type="button" class="btn-unlock" onclick="payerAbonnement()">🔓 Débloquer et lire le message supprimé (640 XAF)</button>
+    </div>
   </div>
 
-  <!-- Formulaire d'envoi -->
-  <form onsubmit="envoyerMessage(event)" class="input-group">
-    <input type="text" id="msgInput" placeholder="Écris ton message..." required>
+  <!-- Zone d'envoi pour l'expéditeur -->
+  <form onsubmit="envoyerEtSupprimer(event)" class="input-group">
+    <input type="text" id="msgInput" placeholder="Écris un message anonyme..." required>
     <button type="submit" class="btn-send">Envoyer</button>
   </form>
-
-  <!-- Bouton de récupération -->
-  <button type="button" class="btn-recover" onclick="demanderAbonnement()">🔄 Récupérer les messages supprimés</button>
 </div>
 
 <script>
-  let mesMessages = [];
-
-  function rechargerAffichage() {
-    const box = document.getElementById('messagesList');
-    box.innerHTML = '';
-
-    if (mesMessages.length === 0) {
-      box.innerHTML = '<div style="color: #888; text-align: center; margin-top: 70px; font-size: 13px;">Aucun message pour le moment.</div>';
-      return;
-    }
-
-    mesMessages.forEach((msgText, idx) => {
-      const item = document.createElement('div');
-      item.className = 'message-item';
-      item.innerHTML = `
-        <span>${msgText}</span>
-        <button type="button" class="btn-delete" onclick="supprimerMessage(${idx})">🗑️</button>
-      `;
-      box.appendChild(item);
-    });
-  }
-
-  function envoyerMessage(event) {
+  function envoyerEtSupprimer(event) {
     event.preventDefault();
     const input = document.getElementById('msgInput');
     const texte = input.value.trim();
 
     if (texte !== '') {
-      mesMessages.push(texte);
+      const box = document.getElementById('messagesList');
+      
+      // Simulation : Le message arrive puis est marqué comme effacé par l'expéditeur
+      const newItem = document.createElement('div');
+      newItem.className = 'message-item';
+      newItem.innerHTML = `
+        <div style="font-weight: bold; color: #555; margin-bottom: 4px;">📩 Message Anonyme Reçu</div>
+        <div class="deleted-notice">
+          ⚠️ <i>L'expéditeur a annulé et supprimé ce message juste après l'envoi.</i>
+        </div>
+        <button type="button" class="btn-unlock" onclick="payerAbonnement()">🔓 Débloquer et lire le message supprimé (640 XAF)</button>
+      `;
+      
+      box.insertBefore(newItem, box.firstChild);
       input.value = '';
-      rechargerAffichage();
-    }
-  }
-
-  function supprimerMessage(idx) {
-    if (confirm("Voulez-vous vraiment supprimer ce message ?")) {
-      mesMessages.splice(idx, 1);
-      rechargerAffichage();
     }
   }
 
   // Redirection directe vers la caisse Maketou
   function payerAbonnement() {
     window.location.href = "https://ici-y-a-tout.mymaketou.shop/products/ia-business-le-guide-pour-generer-des-revenus/checkout"; 
-  }
-
-  // Message d'accès refusé lors de la tentative de récupération
-  function demanderAbonnement() {
-    alert("🔒 ACCÈS REFUSÉ !\n\nVous devez obligatoirement souscrire à l'abonnement VIP (640 XAF / mois) pour effectuer cette action.");
   }
 </script>
 
