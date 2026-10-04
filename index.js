@@ -1,124 +1,71 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>application Hushnote</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; box-sizing: border-box; }
-    h2 { color: #1a73e8; font-size: 22px; margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    p { color: #3c4043; font-size: 14px; margin-bottom: 16px; }
-    textarea { width: 100%; height: 90px; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; resize: none; box-sizing: border-box; font-size: 14px; outline: none; }
-    .btn-send { width: 100%; padding: 12px; margin-top: 12px; border: none; border-radius: 8px; background: #1a73e8; color: white; font-weight: bold; font-size: 14px; cursor: pointer; }
-    .btn-recover { width: 100%; padding: 12px; margin-top: 20px; border: none; border-radius: 8px; background: #00838f; color: white; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .messages-list { margin-top: 20px; text-align: left; display: flex; flex-direction: column; gap: 8px; }
-    .message-item { background: #e8f0fe; padding: 10px 14px; border-radius: 8px; font-size: 14px; color: #202124; display: flex; justify-content: space-between; align-items: center; word-break: break-word; }
-    .btn-delete { background: none; border: none; color: #d93025; font-size: 16px; cursor: pointer; padding: 0 4px; }
-  </style>
-</head>
-<body>
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
-<div class="card">
-  <h2>🔒 application Hushnote</h2>
-  <p>Envoie un message anonyme :</p>
-  
-  <textarea id="msgInput" placeholder="Écris ton message..."></textarea>
-  <button class="btn-send" onclick="envoyerMessage()">Envoyer</button>
+const app = express();
+const server = http.createServer(app);
 
-  <div class="messages-list" id="messagesList"></div>
+// Configuration Supabase
+const SUPABASE_URL = 'https://xaetcojuoooqtbdcuyso.supabase.co';
+const SUPABASE_KEY = 'sb_pub_xaetcojuoooqtbdcuyso';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  <button class="btn-recover" onclick="recupererMessagesSupprimes()">🔄 Récupérer les messages supprimés</button>
-</div>
+app.use(express.json());
+app.use(express.static(__dirname));
 
-<script>
-  let messagesLocaux = [];
-  let messagesSupprimesLocaux = [];
+// Route principale pour afficher la page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
-  async function chargerMessages() {
-    try {
-      const res = await fetch('/api/messages');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        messagesLocaux = data;
-        afficherMessages();
-      }
-    } catch (e) {
-      console.error(e);
-    }
+// Route API pour récupérer tous les messages non supprimés
+app.get('/api/messages', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .or('is_deleted.is.null,is_deleted.eq.false');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
+});
 
-  function afficherMessages() {
-    const list = document.getElementById('messagesList');
-    list.innerHTML = '';
-    messagesLocaux.forEach((m, index) => {
-      const div = document.createElement('div');
-      div.className = 'message-item';
-      
-      const textSpan = document.createElement('span');
-      textSpan.textContent = m.content || m.texte || m;
-      
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'btn-delete';
-      deleteBtn.innerHTML = '🗑️';
-      deleteBtn.onclick = () => supprimerMessage(index);
+// Route API pour poster un nouveau message
+app.post('/api/messages', async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: 'Contenu vide' });
 
-      div.appendChild(textSpan);
-      div.appendChild(deleteBtn);
-      list.appendChild(div);
-    });
+    const { data, error } = await supabase
+      .from('messages')
+      .insert([{ content: content, is_deleted: false }]);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
+});
 
-  async function envoyerMessage() {
-    const input = document.getElementById('msgInput');
-    const texte = input.value.trim();
-    if (!texte) return alert("Veuillez écrire un message.");
-
-    messagesLocaux.push({ content: texte });
-    afficherMessages();
-    input.value = '';
-
-    try {
-      await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: texte })
-      });
-    } catch (e) {
-      console.error(e);
-    }
+// Route API pour récupérer les messages marqués comme supprimés
+app.get('/api/messages-deleted', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('is_deleted', true);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
+});
 
-  function supprimerMessage(index) {
-    if (confirm("Voulez-vous vraiment supprimer ce message ?")) {
-      const supprime = messagesLocaux.splice(index, 1);
-      messagesSupprimesLocaux.push(supprime[0]);
-      afficherMessages();
-    }
-  }
-
-  async function recupererMessagesSupprimes() {
-    try {
-      const res = await fetch('/api/messages-deleted');
-      const data = await res.json();
-      
-      if ((!data || data.length === 0) && messagesSupprimesLocaux.length === 0) {
-        alert("ℹ️ Aucun message à récupérer.");
-      } else {
-        alert("🔒 ACCÈS REFUSÉ !\n\nVous devez obligatoirement souscrire à l'abonnement VIP (640 XAF / mois) avant de pouvoir récupérer les messages supprimés.");
-      }
-    } catch (e) {
-      if (messagesSupprimesLocaux.length === 0) {
-        alert("ℹ️ Aucun message à récupérer.");
-      } else {
-        alert("🔒 ACCÈS REFUSÉ !\n\nVous devez obligatoirement souscrire à l'abonnement VIP (640 XAF / mois) avant de pouvoir récupérer les messages supprimés.");
-      }
-    }
-  }
-
-  chargerMessages();
-</script>
-
-</body>
-</html>
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Serveur prêt sur le port ${PORT}`);
+});
   
