@@ -3,121 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>application Hushnote</title>
+  <title>Hushnote</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; box-sizing: border-box; }
-    h2 { color: #1a73e8; font-size: 22px; margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    p { color: #3c4043; font-size: 14px; margin-bottom: 16px; }
-    textarea { width: 100%; height: 90px; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; resize: none; box-sizing: border-box; font-size: 14px; outline: none; }
-    .btn-send { width: 100%; padding: 12px; margin-top: 12px; border: none; border-radius: 8px; background: #1a73e8; color: white; font-weight: bold; font-size: 14px; cursor: pointer; }
-    .btn-recover { width: 100%; padding: 12px; margin-top: 20px; border: none; border-radius: 8px; background: #00838f; color: white; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .messages-list { margin-top: 20px; text-align: left; display: flex; flex-direction: column; gap: 8px; }
-    .message-item { background: #e8f0fe; padding: 10px 14px; border-radius: 8px; font-size: 14px; color: #202124; display: flex; justify-content: space-between; align-items: center; word-break: break-word; }
-    .btn-delete { background: none; border: none; color: #d93025; font-size: 16px; cursor: pointer; padding: 0 4px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; display: flex; justify-content: center; }
+    .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; width: 100%; box-sizing: border-box; }
+    
+    .vip-banner { background: #fffde7; border: 1px solid #fff59d; border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 20px; }
+    .vip-title { font-weight: bold; color: #333; margin-bottom: 8px; font-size: 15px; }
+    .vip-sub { font-size: 13px; color: #555; margin-bottom: 12px; line-height: 1.4; }
+    .btn-vip { background: #2e7d32; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 14px; }
+    
+    .messages-box { border: 1px solid #e0e0e0; border-radius: 12px; min-height: 180px; max-height: 250px; overflow-y: auto; padding: 10px; margin-bottom: 15px; background: #fafafa; }
+    .message-item { background: white; border: 1px solid #eee; padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; word-break: break-word; }
+    .btn-delete { background: none; border: none; cursor: pointer; font-size: 16px; padding: 0 5px; }
+    
+    .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
+    .input-group input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; outline: none; font-size: 14px; }
+    .btn-send { background: #007bff; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    
+    .btn-recover { background: #00838f; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 14px; }
   </style>
 </head>
 <body>
 
 <div class="card">
-  <h2>🔒 application Hushnote</h2>
-  <p>Envoie un message anonyme :</p>
-  
-  <textarea id="msgInput" placeholder="Écris ton message..."></textarea>
-  <button class="btn-send" onclick="envoyerMessage()">Envoyer</button>
+  <!-- Bannières VIP -->
+  <div class="vip-banner">
+    <div class="vip-title">🔒 Fonctionnalité Réservée aux Membres VIP</div>
+    <div class="vip-sub">Abonnez-vous au Pass VIP (640 XAF / mois) pour débloquer la récupération de tous vos messages supprimés.</div>
+    <button class="btn-vip" onclick="demanderAbonnement()">💳 S'abonner au VIP (640 XAF/mois)</button>
+  </div>
 
-  <div class="messages-list" id="messagesList"></div>
+  <!-- Zone de réception des messages -->
+  <div class="messages-box" id="messagesList">
+    <div style="color: #888; text-align: center; margin-top: 70px; font-size: 13px;">Aucun message pour le moment.</div>
+  </div>
 
-  <button class="btn-recover" onclick="recupererMessagesSupprimes()">🔄 Récupérer les messages supprimés</button>
+  <!-- Envoi de message -->
+  <div class="input-group">
+    <input type="text" id="msgInput" placeholder="Écris ton message...">
+    <button class="btn-send" onclick="envoyerMessage()">Envoyer</button>
+  </div>
+
+  <!-- Bouton de récupération -->
+  <button class="btn-recover" onclick="demanderAbonnement()">🔄 Récupérer les messages supprimés</button>
 </div>
 
 <script>
-  let messagesLocaux = [];
-  let messagesSupprimesLocaux = [];
-
-  async function chargerMessages() {
-    try {
-      const res = await fetch('/api/messages');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        messagesLocaux = data;
-        afficherMessages();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
+  let messages = [];
 
   function afficherMessages() {
-    const list = document.getElementById('messagesList');
-    list.innerHTML = '';
-    messagesLocaux.forEach((m, index) => {
-      const div = document.createElement('div');
-      div.className = 'message-item';
-      
-      const textSpan = document.createElement('span');
-      textSpan.textContent = m.content || m.texte || m;
-      
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'btn-delete';
-      deleteBtn.innerHTML = '🗑️';
-      deleteBtn.onclick = () => supprimerMessage(index);
+    const container = document.getElementById('messagesList');
+    if (messages.length === 0) {
+      container.innerHTML = '<div style="color: #888; text-align: center; margin-top: 70px; font-size: 13px;">Aucun message pour le moment.</div>';
+      return;
+    }
 
-      div.appendChild(textSpan);
-      div.appendChild(deleteBtn);
-      list.appendChild(div);
+    container.innerHTML = '';
+    messages.forEach((msg, index) => {
+      const item = document.createElement('div');
+      item.className = 'message-item';
+      item.innerHTML = `
+        <span>${msg}</span>
+        <button class="btn-delete" onclick="supprimerMessage(${index})" title="Supprimer">🗑️</button>
+      `;
+      container.appendChild(item);
     });
   }
 
-  async function envoyerMessage() {
+  function envoyerMessage() {
     const input = document.getElementById('msgInput');
     const texte = input.value.trim();
-    if (!texte) return alert("Veuillez écrire un message.");
+    if (!texte) return;
 
-    messagesLocaux.push({ content: texte });
-    afficherMessages();
+    messages.push(texte);
     input.value = '';
-
-    try {
-      await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: texte })
-      });
-    } catch (e) {
-      console.error(e);
-    }
+    afficherMessages();
   }
 
   function supprimerMessage(index) {
-    if (confirm("Voulez-vous vraiment supprimer ce message ?")) {
-      const supprime = messagesLocaux.splice(index, 1);
-      messagesSupprimesLocaux.push(supprime[0]);
+    if (confirm("Voulez-vous supprimer ce message ?")) {
+      messages.splice(index, 1);
       afficherMessages();
     }
   }
 
-  async function recupererMessagesSupprimes() {
-    try {
-      const res = await fetch('/api/messages-deleted');
-      const data = await res.json();
-      
-      if ((!data || data.length === 0) && messagesSupprimesLocaux.length === 0) {
-        alert("ℹ️️ Aucun message à récupérer.");
-      } else {
-        alert("🔒 ACCÈS REFUSÉ !\n\nVous devez obligatoirement souscrire à l'abonnement VIP (640 XAF / mois) avant de pouvoir récupérer les messages supprimés.");
-      }
-    } catch (e) {
-      if (messagesSupprimesLocaux.length === 0) {
-        alert("ℹ️ Aucun message à récupérer.");
-      } else {
-        alert("🔒 ACCÈS REFUSÉ !\n\nVous devez obligatoirement souscrire à l'abonnement VIP (640 XAF / mois) avant de pouvoir récupérer les messages supprimés.");
-      }
-    }
+  function demanderAbonnement() {
+    alert("🔒 ACCÈS REFUSÉ !\n\nVous devez obligatoirement souscrire à l'abonnement VIP (640 XAF / mois) pour effectuer cette action.");
   }
-
-  chargerMessages();
 </script>
 
 </body>
-</html>
+  </html>
+  
