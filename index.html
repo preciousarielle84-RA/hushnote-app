@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hushnote - Récupération de Messages (WhatsApp, Telegram, FB)</title>
+  <title>Hushnote - Récupération de Messages</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; display: flex; justify-content: center; }
     .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; width: 100%; box-sizing: border-box; }
@@ -18,12 +18,11 @@
     
     .deleted-notice { background: #ffebee; border: 1px dashed #ef5350; color: #c62828; padding: 10px; border-radius: 8px; font-size: 13px; margin: 8px 0; }
     
-    .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
-    .input-group input { padding: 10px; border: 1px solid #ccc; border-radius: 8px; outline: none; font-size: 14px; }
-    .btn-container { display: flex; gap: 8px; }
-    .btn-send { flex: 1; background: #007bff; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
-    .btn-sim-delete { flex: 1; background: #d32f2f; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
+    .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
+    .input-group input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; outline: none; font-size: 14px; }
+    .btn-send { background: #007bff; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     
+    .btn-delete-sender { background: #757575; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 8px; }
     .btn-unlock { background: #d32f2f; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 13px; margin-top: 5px; }
   </style>
 </head>
@@ -37,23 +36,23 @@
     <button type="button" class="btn-vip" onclick="payerAbonnement()">💳 S'abonner au Pass VIP (640 XAF/mois)</button>
   </div>
 
-  <!-- Vue du destinataire : Liste des messages -->
+  <!-- Liste des messages -->
   <div class="messages-box" id="messagesList">
     <div id="emptyMsg" style="color: #888; text-align: center; margin-top: 80px; font-size: 13px;">Aucun message pour le moment.</div>
   </div>
 
-  <!-- Zone de test/simulation d'envoi -->
-  <div class="input-group">
-    <input type="text" id="msgInput" placeholder="Écris un message de test...">
-    <div class="btn-container">
-      <button type="button" class="btn-send" onclick="ajouterMessage(false)">📤 Message normal</button>
-      <button type="button" class="btn-sim-delete" onclick="ajouterMessage(true)">⚠️ Simuler suppression</button>
-    </div>
-  </div>
+  <!-- Zone de saisie et d'envoi normal -->
+  <form onsubmit="envoyerMessage(event)" class="input-group">
+    <input type="text" id="msgInput" placeholder="Écris un message..." required>
+    <button type="submit" class="btn-send">Envoyer</button>
+  </form>
 </div>
 
 <script>
-  function ajouterMessage(estSupprime) {
+  let msgCount = 0;
+
+  function envoyerMessage(event) {
+    event.preventDefault();
     const input = document.getElementById('msgInput');
     const texte = input.value.trim();
 
@@ -62,19 +61,30 @@
     const emptyMsg = document.getElementById('emptyMsg');
     if (emptyMsg) emptyMsg.remove();
 
+    msgCount++;
+    const msgId = 'msg-' + msgCount;
+
     const box = document.getElementById('messagesList');
     const newItem = document.createElement('div');
     newItem.className = 'message-item';
+    newItem.id = msgId;
 
-    if (!estSupprime) {
-      // Message normal (sans option de suppression côté destinataire)
-      newItem.innerHTML = `
-        <div style="font-weight: bold; color: #007bff; margin-bottom: 4px;">💬 Message Reçu</div>
-        <div>${texte}</div>
-      `;
-    } else {
-      // Message supprimé par l'expéditeur
-      newItem.innerHTML = `
+    // Envoi normal
+    newItem.innerHTML = `
+      <div style="font-weight: bold; color: #007bff; margin-bottom: 4px;">💬 Message Reçu</div>
+      <div>${texte}</div>
+      <button type="button" class="btn-delete-sender" onclick="supprimerParExpediteur('${msgId}')">🗑️ Supprimer le message (Côté expéditeur)</button>
+    `;
+
+    box.insertBefore(newItem, box.firstChild);
+    input.value = '';
+  }
+
+  // L'expéditeur décide de supprimer le message
+  function supprimerParExpediteur(id) {
+    const item = document.getElementById(id);
+    if (item) {
+      item.innerHTML = `
         <div style="font-weight: bold; color: #555; margin-bottom: 4px;">💬 Message Reçu</div>
         <div class="deleted-notice">
           ⚠️ <i>L'expéditeur a supprimé ce message.</i>
@@ -82,9 +92,6 @@
         <button type="button" class="btn-unlock" onclick="payerAbonnement()">🔓 Débloquer et lire le message supprimé (640 XAF)</button>
       `;
     }
-
-    box.insertBefore(newItem, box.firstChild);
-    input.value = '';
   }
 
   function payerAbonnement() {
@@ -93,5 +100,5 @@
 </script>
 
 </body>
-        </html>
-        
+  </html>
+  
