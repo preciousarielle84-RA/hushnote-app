@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hushnote - Récupération de Messages</title>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; display: flex; justify-content: center; }
     .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; width: 100%; box-sizing: border-box; }
@@ -38,10 +40,10 @@
 
   <!-- Liste des messages -->
   <div class="messages-box" id="messagesList">
-    <div id="emptyMsg" style="color: #888; text-align: center; margin-top: 80px; font-size: 13px;">Aucun message pour le moment.</div>
+    <div id="emptyMsg" style="color: #888; text-align: center; margin-top: 80px; font-size: 13px;">Chargement des messages...</div>
   </div>
 
-  <!-- Zone de saisie et d'envoi normal -->
+  <!-- Zone de saisie et d'envoi -->
   <form onsubmit="envoyerMessage(event)" class="input-group">
     <input type="text" id="msgInput" placeholder="Écris un message..." required>
     <button type="submit" class="btn-send">Envoyer</button>
@@ -49,42 +51,86 @@
 </div>
 
 <script>
-  let msgCount = 0;
+  // Configuration Supabase avec tes identifiants réels
+  const SUPABASE_URL = "https://xaetcojuoooqtbdcuyso.supabase.co";
+  const SUPABASE_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhZXRjb2p1b29vcXRiZGN1eXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExMTMyNTUsImV4cCI6MjEwNjY4OTI1NX0.CxnV-2j0ZLugiQiWnyxvAdeAAEm3Gb7gLtCP3KwJhDk";
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  function envoyerMessage(event) {
+  // Charger les messages au démarrage
+  document.addEventListener('DOMContentLoaded', chargerMessages);
+
+  async function chargerMessages() {
+    const { data: messages, error } = await supabaseClient
+      .from('messages')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Erreur de chargement :", error);
+      return;
+    }
+
+    const box = document.getElementById('messagesList');
+    box.innerHTML = '';
+
+    if (!messages || messages.length === 0) {
+      box.innerHTML = '<div id="emptyMsg" style="color: #888; text-align: center; margin-top: 80px; font-size: 13px;">Aucun message pour le moment.</div>';
+      return;
+    }
+
+    messages.forEach(msg => afficherMessage(msg));
+  }
+
+  async function envoyerMessage(event) {
     event.preventDefault();
     const input = document.getElementById('msgInput');
     const texte = input.value.trim();
 
     if (!texte) return;
 
-    const emptyMsg = document.getElementById('emptyMsg');
-    if (emptyMsg) emptyMsg.remove();
+    const { data, error } = await supabaseClient
+      .from('messages')
+      .insert([{ content: texte }])
+      .select();
 
-    msgCount++;
-    const msgId = 'msg-' + msgCount;
+    if (error) {
+      alert("Erreur lors de l'envoi : " + error.message);
+      return;
+    }
 
+    input.value = '';
+    chargerMessages();
+  }
+
+  async function supprimerParExpediteur(id) {
+    const { error } = await supabaseClient
+      .from('messages')
+      .update({ is_deleted: true })
+      .eq('id', id);
+
+    if (error) {
+      alert("Erreur lors de la suppression : " + error.message);
+      return;
+    }
+
+    chargerMessages();
+  }
+
+  function afficherMessage(msg) {
     const box = document.getElementById('messagesList');
     const newItem = document.createElement('div');
     newItem.className = 'message-item';
-    newItem.id = msgId;
 
-    // Envoi normal
-    newItem.innerHTML = `
-      <div style="font-weight: bold; color: #007bff; margin-bottom: 4px;">💬 Message Reçu</div>
-      <div>${texte}</div>
-      <button type="button" class="btn-delete-sender" onclick="supprimerParExpediteur('${msgId}')">🗑️ Supprimer le message (Côté expéditeur)</button>
-    `;
-
-    box.insertBefore(newItem, box.firstChild);
-    input.value = '';
-  }
-
-  // L'expéditeur décide de supprimer le message
-  function supprimerParExpediteur(id) {
-    const item = document.getElementById(id);
-    if (item) {
-      item.innerHTML = `
+    if (!msg.is_deleted) {
+      // Message non supprimé
+      newItem.innerHTML = `
+        <div style="font-weight: bold; color: #007bff; margin-bottom: 4px;">💬 Message Reçu</div>
+        <div>${msg.content}</div>
+        <button type="button" class="btn-delete-sender" onclick="supprimerParExpediteur(${msg.id})">🗑️ Supprimer le message (Côté expéditeur)</button>
+      `;
+    } else {
+      // Message supprimé par l'expéditeur
+      newItem.innerHTML = `
         <div style="font-weight: bold; color: #555; margin-bottom: 4px;">💬 Message Reçu</div>
         <div class="deleted-notice">
           ⚠️ <i>L'expéditeur a supprimé ce message.</i>
@@ -92,6 +138,8 @@
         <button type="button" class="btn-unlock" onclick="payerAbonnement()">🔓 Débloquer et lire le message supprimé (640 XAF)</button>
       `;
     }
+
+    box.appendChild(newItem);
   }
 
   function payerAbonnement() {
@@ -100,5 +148,4 @@
 </script>
 
 </body>
-  </html>
-  
+</html>
